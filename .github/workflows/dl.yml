@@ -121,19 +121,6 @@ jobs:
             echo "Error file created: downloads/$ERROR_FILENAME"
           }
 
-          get_sourceforge_direct_url() {
-            local URL="$1"
-            if [[ "$URL" == *"sourceforge.net"* ]]; then
-              if [[ "$URL" != *"/download"* ]]; then
-                echo "${URL}/download"
-              else
-                echo "$URL"
-              fi
-            else
-              echo "$URL"
-            fi
-          }
-
           download_with_retry() {
             local URL="$1"
             local FILENAME="$2"
@@ -141,15 +128,9 @@ jobs:
             local RETRY_DELAY=5
             local SUCCESS=false
             local ERROR_LOG=""
-            local DOWNLOAD_URL=$(get_sourceforge_direct_url "$URL")
 
             for ((attempt=1; attempt<=MAX_RETRIES; attempt++)); do
               echo "Attempt $attempt of $MAX_RETRIES for $FILENAME"
-
-              if [[ "$URL" == *"sourceforge.net"* ]]; then
-                echo "SourceForge detected - waiting 10 seconds for redirect..."
-                sleep 10
-              fi
 
               ERROR_LOG=$(aria2c \
                 --split=2 \
@@ -165,7 +146,7 @@ jobs:
                 --auto-file-renaming=false \
                 --dir="tmp_downloads" \
                 --out="$FILENAME" \
-                "$DOWNLOAD_URL" 2>&1) && SUCCESS=true && break
+                "$URL" 2>&1) && SUCCESS=true && break
 
               echo "aria2c failed, trying curl fallback..."
 
@@ -176,7 +157,7 @@ jobs:
                 --max-time 3600 \
                 -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" \
                 -o "tmp_downloads/$FILENAME" \
-                "$DOWNLOAD_URL" 2>&1) && SUCCESS=true && break
+                "$URL" 2>&1) && SUCCESS=true && break
 
               echo "Waiting ${RETRY_DELAY}s before retry..."
               sleep $RETRY_DELAY
